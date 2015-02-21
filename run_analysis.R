@@ -1,60 +1,56 @@
-if (!require("data.table")) {
-  install.packages("data.table")
-}
+library("reshape2")
 
-if (!require("reshape2")) {
-  install.packages("reshape2")
-}
+activity_labels <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//activity_labels.txt")
 
-require("data.table")
-require("reshape2")
+features <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//features.txt")
+features <- features[2]
+features <- as.vector(features[,1])
 
-activity_labels <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//activity_labels.txt")[,2]
-
-features <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//features.txt")[,2]
-
-extract_features <- grepl("mean|std", features)
-
-X_test <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//test/X_test.txt")
+x_test <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//test//X_test.txt", colClasses = c("numeric"), col.names = features)
 y_test <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//test//y_test.txt")
 subject_test <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//test//subject_test.txt")
 
-names(X_test) = features
+x_test <- x_test[c(201, 202, 214, 215, 227, 228, 240, 241, 253, 254, 503, 504, 516, 517, 529, 530, 542, 543)]
 
-X_test = X_test[,extract_features]
+x_test[,"activity"] <- y_test
+x_test$activity <- as.factor(x_test$activity)
+x_test[, "subject"] <- subject_test
+x_test$subject <- as.factor(x_test$subject)
 
-y_test[,2] = activity_labels[y_test[,1]]
-names(y_test) = c("Activity_ID", "Activity_Label")
-names(subject_test) = "subject"
+x_test$activity_labels <- x_test$activity
+x_test$activity_labels <- factor(x_test$activity_labels, levels = c(1,2,3,4,5,6),
+                                 labels = c("WALKING","WALKING_UPSTAIRS",
+                                            "WALKING_DOWNSTAIRS","SITTING",
+                                            "STANDING","LAYING"))
 
-test_data <- cbind(as.data.table(subject_test), y_test, X_test)
-
-X_train <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//train//X_train.txt")
+x_train <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//train//X_train.txt", colClasses = c("numeric"), col.names = features)
 y_train <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//train//y_train.txt")
-
 subject_train <- read.table("C://Users//Indika//Desktop//Coursera//UCI HAR Dataset//train//subject_train.txt")
 
-names(X_train) = features
+x_train <- x_train[c(201, 202, 214, 215, 227, 228, 240, 241, 253, 254, 503, 504, 516, 517, 529, 530, 542, 543)]
 
-X_train = X_train[,extract_features]
+x_train[,"activity"] <- y_train
+x_train$activity <- as.factor(x_train$activity)
+x_train[, "subject"] <- subject_train
+x_train$subject <- as.factor(x_train$subject)
 
-y_train[,2] = activity_labels[y_train[,1]]
-names(y_train) = c("Activity_ID", "Activity_Label")
-names(subject_train) = "subject"
+x_train$activity_labels <- x_train$activity
+x_train$activity_labels <- factor(x_train$activity_labels, levels = c(1,2,3,4,5,6),
+                                 labels = c("WALKING","WALKING_UPSTAIRS",
+                                            "WALKING_DOWNSTAIRS","SITTING",
+                                            "STANDING","LAYING"))
 
-train_data <- cbind(as.data.table(subject_train), y_train, X_train)
+all_data <- rbind(x_test, x_train)
+# 
+rm(subject_test)
+rm(x_test)
+rm(y_test)
+rm(subject_train)
+rm(x_train)
+rm(y_train)
+rm(features)
 
-data = rbind(test_data, train_data)
+agg_all <- aggregate(all_data, by= list(all_data$activity_labels, all_data$subject), FUN = mean, na.rm = FALSE)
 
-id_labels   = c("subject", "Activity_ID", "Activity_Label")
-data_labels = setdiff(colnames(data), id_labels)
-melt_data      = melt(data, id = id_labels, measure.vars = data_labels)
-
-tidy_data   = dcast(melt_data, subject + Activity_Label ~ variable, mean)
-
-write.table(tidy_data, file = "./tidy_data.txt", row.name=FALSE)
-
-
-
-
+write.table(agg_all, file="tidy_data.txt", col.names=TRUE)
 
